@@ -1,0 +1,27 @@
+syncal.settings.entity_types:
+  path: 'admin/config/syncal/settings'
+  defaults:
+    _form: '\Drupal\syncal\Form\SyncalSettingsForm'
+    _title: 'SynCal Settings'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+
+syncal.settings.google_calendar:
+  path: 'admin/config/syncal/google_calendar'
+  defaults:
+    _form: '\Drupal\syncal\Form\GoogleCalendarForm'
+    _title: 'Google Calendar Settings'
+  requirements:
+    _permission: 'access administration pages'
+  options:
+    _admin_route: TRUE
+
+syncal.google_calendar.auth_redirect_uri:
+  path: 'user/syncal/google_calendar'
+  defaults:
+    _controller: '\Drupal\syncal\Controller\GoogleCalendarAuthentication::validateRedirect'
+  requirements:
+    _permission: 'access content'
+

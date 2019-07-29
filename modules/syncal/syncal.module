@@ -1,0 +1,324 @@
+<?php
+
+/**
+ * @file
+ * Main SynCal module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function syncal_form_user_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id());
+
+  // Pass the account of the current user being viewed to avoid conflict in the
+  // case where other users can manage other user's accounts.
+  $form['user'] = array(
+    '#type' => 'value',
+    '#value' => $user,
+  );
+
+  $config = \Drupal::config('system.site');
+
+  $manager = \Drupal::service('plugin.manager.syncal');
+  $plugins = $manager->getDefinitions();
+  $instance = NULL;
+
+  foreach ($plugins as $plugin) {
+    $instance = $manager->createInstance($plugin['id']);
+    $plugin_id = $instance->getPluginId();
+    $plugin_label = $instance->getName()->render();
+
+    $form[$plugin_id] = array(
+      '#type' => 'fieldset',
+      '#title' => t($plugin_label),
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE,
+    );
+
+    $form[$plugin_id]['plugin'] = array(
+      '#type' => 'value',
+      '#value' => $instance,
+    );
+
+    if(!syncal_plugin_requirements('user', 'user', "field_{$plugin_id}_token")){
+      $form[$plugin_id]["missing_field_{$plugin_id}_token"] = [
+        '#type' => 'markup',
+        '#markup' => t('Plugin is missing the required field @field.', array('@field' => "field_{$plugin_id}_token")),
+      ];
+      continue;
+    }
+
+    if ($user->get("field_{$plugin_id}_token")->value) {
+      $form[$plugin_id]['msg'] = array(
+        '#type' => 'button',
+        '#value' => t("{$plugin_label} connected"),
+        '#weight' => 15,
+        '#disabled' => TRUE,
+        '#attributes' => array(
+          'class' => array('btn', 'btn-primary')
+        )
+      );
+
+      if ($calendars = $instance->getCalendars($user)) {
+
+        $form[$plugin_id]['calendar_id'] = array(
+          '#type' => 'radios',
+          '#options' => $calendars,
+          '#default_value' => $user->get("field_{$plugin_id}_settings")->value,
+          '#description' => t('Select the calendar where to store the events.'),
+          '#prefix' => t("Select the @plugin_label where to store events, if none is selected the primary account will be used.", array('@plugin_label' => $plugin_label)),
+        );
+
+        $form[$plugin_id]['user_settings'] = array(
+          '#type' => 'submit',
+          '#value' => t('Save settings'),
+          '#description' => t('Allow @sitename permission to connect to your @plugin_label', array('@sitename' => $config->get('name'), '@plugin_label' => $plugin_label)),
+          '#weight' => 15,
+          '#submit' => array('set_user_profile_settings_form_submit'),
+        );
+
+        $form[$plugin_id]['revoke_access'] = array(
+          '#type' => 'submit',
+          '#value' => t("Revoke access to {$plugin_label}"),
+          '#description' => t('Revoke @sitename access permission to connect and sync events to your @plugin_label', array('@sitename' => $config->get('name'), '@plugin_label' => $plugin_label)),
+          '#weight' => 15,
+          '#submit' => array("set_{$plugin_id}_revoke_access_submit"),
+          '#attributes' => array(
+            'onclick' => "if(!confirm('Are you sure you want to revoke access to your {$plugin_label}?')) { return false; }",
+            'class' => array("{$plugin_id}_revoke_access"),
+          ),
+        );
+      }
+      else {
+        $instance->revokeAccess('expired');
+      }
+    }
+    else {
+      $form[$plugin_id]['grant_access'] = array(
+        '#type' => 'submit',
+        '#value' => t("Connect {$plugin_label}"),
+        '#description' => t('Grant @sitename access permission to connect and sync events to your @plugin_label', array('@sitename' => $config->get('name'), '@plugin_label' => $plugin_label)),
+        '#weight' => 15,
+        '#submit' => array("set_{$plugin_id}_grant_access_submit"),
+      );
+    }
+  }
+}
+
+/**
+ * Implements hook_node_presave().
+ */
+function syncal_node_presave(Drupal\Core\Entity\EntityInterface $node) {
+
+  $manager = \Drupal::service('plugin.manager.syncal');
+  $plugins = $manager->getDefinitions();
+  $instance = NULL;
+
+  foreach ($plugins as $plugin => $plugin_config) {
+    $function = __FUNCTION__ . '_' . $plugin;
+
+    if (function_exists($function)) {
+      call_user_func_array($function, array($node));
+    }
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function syncal_node_delete(Drupal\Core\Entity\EntityInterface $node) {
+  $manager = \Drupal::service('plugin.manager.syncal');
+  $plugins = $manager->getDefinitions();
+  $instance = NULL;
+
+  foreach ($plugins as $plugin => $plugin_config) {
+    $function = __FUNCTION__ . '_' . $plugin;
+
+    if (function_exists($function)) {
+      call_user_func_array($function, array($node));
+    }
+  }
+}
+
+/**
+ * Form submit handler to give users the ability to consent the site to perform
+ * the supported operations, e.g. insert and update.
+ */
+function set_google_calendar_grant_access_submit($form, &$form_state, $account = NULL) {
+
+  $plugin = $form_state->getValue('plugin');
+
+  try {
+    $plugin->getAPIClientConsentVerify();
+  } catch(\Exception $e) {
+    \Drupal::messenger()->addMessage(t('Unable to verify the Google Calendar consent.'), 'error');
+  }
+}
+
+/**
+ * Revoke access permission to connect and sync events to the user's Google
+ * calendar.
+ */
+function set_google_calendar_revoke_access_submit($form, &$form_state) {
+  $plugin = $form_state->getValue('plugin');
+  // Delete the value stored in the user's Google calendar token field and the
+  // customized settings stored in the Google calendar configuration field.
+  $plugin->revokeAccess();
+}
+
+/**
+ * Submit callback handler to store user profile settings.
+ */
+function set_user_profile_settings_form_submit($form, &$form_state) {
+  $settings = $form_state->getValue('calendar_id');
+  $user = \Drupal\user\Entity\User::load(\Drupal::currentUser()->id());
+  $user->set('field_google_calendar_settings', $settings);
+  $user->save();
+}
+
+/**
+ * Implements hook_node_presave_PLUGIN_NAME().
+ */
+function syncal_node_presave_google_calendar($node) {
+  // Ensure the content type is supported.
+  if (!syncal_is_supported_node_type($node->getType())) {
+    return;
+  }
+
+  // Ensure the file still exists.
+  $auth_fid = \Drupal::config('syncal.settings')->get('syncal_google_calendar_auth_file_id');
+  $auth_file = \Drupal\file\Entity\File::load($auth_fid);
+
+  if (!$auth_file->getFileUri()) {
+    return;
+  }
+
+  // Get the Contractor Profile metadata wrapper.
+  $user = \Drupal\user\Entity\User::load($node->getOwnerId());
+  // List of supported third-party apps.
+  $supported_apps = syncal_get_all_apps_list($node->getType());
+
+  // Iterate through the apps.
+  foreach ($supported_apps as $supported_app => $supported) {
+
+    $manager = \Drupal::service('plugin.manager.syncal');
+    $instance = $manager->createInstance($supported_app);
+
+    $profile_field_name = "field_{$supported_app}_token";
+    $event_id_field_name = "field_{$supported_app}_event_id";
+    // Check if the user connected the supported app calendar.
+    if ($user->get($profile_field_name)) {
+      // Check if the event has been assigned a supported app ID.
+      if ($node->get($event_id_field_name)->getString()) {
+        $instance->eventPrepareOperation($node, 'update');
+      }
+      // The event does not have a supported app event ID assigned. Existing
+      // events prior to enabling the supported app is an example of when this
+      // condition applies.
+      else {
+        $event = $instance->eventPrepareOperation($node, 'insert');
+        // Assign the Google event ID to the cac_google_event_id
+        $node->{$event_id_field_name}->value = $event->id;
+        $node->set($event_id_field_name, $event->id);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_presave_PLUGIN_NAME().
+ */
+function syncal_node_delete_google_calendar($node) {
+  // Ensure the content type is supported.
+  if (!syncal_is_supported_node_type($node->getType())) {
+    return;
+  }
+
+  // Ensure the file still exists.
+  $auth_fid = \Drupal::config('syncal.settings')->get('syncal_google_calendar_auth_file_id');
+  $auth_file = \Drupal\file\Entity\File::load($auth_fid);
+
+  if (!$auth_file->getFileUri()) {
+    return;
+  }
+
+  // Get the Contractor Profile metadata wrapper.
+  $user = \Drupal\user\Entity\User::load($node->getOwnerId());
+  // List of supported third-party apps.
+  $supported_apps = syncal_get_all_apps_list($node->getType());
+
+  // Iterate through the apps.
+  foreach ($supported_apps as $supported_app => $supported) {
+
+    $manager = \Drupal::service('plugin.manager.syncal');
+    $instance = $manager->createInstance($supported_app);
+
+    $profile_field_name = "field_{$supported_app}_token";
+    $event_id_field_name = "field_{$supported_app}_event_id";
+    // Check if the user connected the supported app calendar.
+    if ($user->get($profile_field_name)) {
+      // Check if the event has been assigned a supported app ID.
+      if ($node->get($event_id_field_name)->getString()) {
+        $instance->eventPrepareOperation($node, 'delete');
+      }
+      // The event does not have a supported app event ID assigned. Existing
+      // events prior to enabling the supported app is an example of when this
+      // condition applies.
+      else {
+        \Drupal::messenger()->addMessage(t('Google calendar event could not be deleted. Event does not have an event ID.'), 'error');
+      }
+    }
+  }
+}
+
+/**
+ * Validate helper function to ensure the content type is supported by the site.
+ *
+ * @param $bundle
+ *   The content type (bundle) being performed an operation on.
+ * @return bool
+ *   True if the content type is supported by the site, false if its not
+ *   supported.
+ */
+function syncal_is_supported_node_type($bundle) {
+  $supported_types = \Drupal::config('syncal.settings')->get('syncal_content_types');
+  foreach ($supported_types as $supported_type => $supported) {
+    if ($supported_type == $bundle && $supported) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
+/**
+ * Retrieve the plugins supported by the entity type.
+ *
+ * @param $entity_type
+ *    The entity type to check which plugins it supports.
+ * @return array|mixed|null
+ *    A list of plugins.
+ */
+function syncal_get_all_apps_list($entity_type) {
+  return \Drupal::config('syncal.settings')->get($entity_type . '_plugins');
+}
+
+/**
+ * Ensure a plugin's field requirement is met.
+ *
+ * @param $entity_type
+ *   The entity type to check against.
+ * @param $bundle
+ *   The entity type's bundle.
+ * @param $field_name
+ *   The field name that needs to exists in order for the requirement to be met.
+ * @return bool
+ *   True if the field exists, false otherwise.
+ */
+function syncal_plugin_requirements($entity_type, $bundle, $field_name) {
+  $fields = \Drupal::service('entity_field.manager')->getFieldDefinitions($entity_type, $bundle);
+  return isset($fields[$field_name]);
+}

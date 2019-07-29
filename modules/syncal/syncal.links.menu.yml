@@ -1,0 +1,6 @@
+syncal.settings.entity_types:
+  title: 'SynCal Settings'
+  description: 'Sync calendar administration'
+  parent: system.admin_config_system
+  route_name: syncal.settings.entity_types
+  weight: 99

@@ -1,0 +1,4 @@
+services:
+  plugin.manager.syncal:
+    class: Drupal\syncal\SynCalManager
+    parent: default_plugin_manager

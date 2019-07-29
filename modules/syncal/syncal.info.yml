@@ -1,0 +1,11 @@
+name: Sync Calendar
+description: Automated synchronization of events to thirdparty calendar applications.
+package: PARCE
+
+type: module
+core: 8.x
+
+dependencies:
+  - drupal:datetime_range
+
+configure: syncal.settings.entity_types

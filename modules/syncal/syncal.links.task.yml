@@ -1,0 +1,10 @@
+syncal.settings.entity_types:
+  route_name: syncal.settings.entity_types
+  title: Settings
+  base_route: syncal.settings.entity_types
+
+syncal.settings.google_calendar:
+  route_name: syncal.settings.google_calendar
+  title: Google Calendar
+  base_route: syncal.settings.entity_types
+  weight: 20
