@@ -1,0 +1,10 @@
+uc_payment_split_entered:
+  label: 'A payment gets entered for an order'
+  category: 'Payment'
+  context_definitions:
+    order:
+      type: 'entity:uc_order'
+      label: 'Order'
+    account:
+      type: 'entity:user'
+      label: 'User'

@@ -1,0 +1,64 @@
+entity.uc_payment_split_method.collection:
+  path: '/admin/store/config/payment_split'
+  defaults:
+    _entity_list: 'uc_payment_split_method'
+    _title: 'Payment Split methods'
+  requirements:
+    _permission: 'administer store'
+
+entity.uc_payment_split_method.add_form:
+  path: '/admin/store/config/payment_split/add/{plugin_id}'
+  defaults:
+    _controller: '\Drupal\uc_payment_split\Controller\PaymentSplitMethodController::addForm'
+    _title: 'Add payment method'
+  requirements:
+    _permission: 'administer store'
+
+entity.uc_payment_split_method.edit_form:
+  path: '/admin/store/config/payment_split/method/{uc_payment_split_method}'
+  defaults:
+    _entity_form: 'uc_payment_split_method'
+    _title: 'Edit payment method'
+  requirements:
+    _permission: 'administer store'
+
+entity.uc_payment_split_method.enable:
+  path: '/admin/store/config/payment_split/method/{uc_payment_split_method}/enable'
+  defaults:
+    _controller: '\Drupal\uc_payment_split\Controller\PaymentSplitMethodController::performOperation'
+    op: 'enable'
+  requirements:
+    _permission: 'administer store'
+    _csrf_token: 'TRUE'
+
+entity.uc_payment_split_method.disable:
+  path: '/admin/store/config/payment_split/method/{uc_payment_split_method}/disable'
+  defaults:
+    _controller: '\Drupal\uc_payment_split\Controller\PaymentSplitMethodController::performOperation'
+    op: 'disable'
+  requirements:
+    _permission: 'administer store'
+    _csrf_token: 'TRUE'
+
+entity.uc_payment_split_method.delete_form:
+  path: '/admin/store/config/payment_split/method/{uc_payment_split_method}/delete'
+  defaults:
+    _entity_form: 'uc_payment_split_method.delete'
+    _title: 'Delete'
+  requirements:
+    _permission: 'administer store'
+
+uc_payment_splits.order_payments:
+  path: '/admin/store/orders/{uc_order}/payments_split'
+  defaults:
+    _form: '\Drupal\uc_payment_split\Form\OrderPaymentsForm'
+    _title_callback: '\Drupal\uc_order\Controller\OrderController::pageTitle'
+  requirements:
+    _permission: 'view payments'
+
+uc_payment_splits.delete:
+  path: '/admin/store/orders/{uc_order}/payments_split/{uc_payment_split_receipt}/delete'
+  defaults:
+    _form: '\Drupal\uc_payment_split\Form\PaymentDeleteForm'
+  requirements:
+    _permission: 'delete payments'

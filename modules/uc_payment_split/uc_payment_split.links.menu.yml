@@ -1,0 +1,5 @@
+uc_payment_split.admin.store.config.payment:
+  title: 'Payment Split methods'
+  description: 'Choose and configure available payment methods.'
+  route_name: entity.uc_payment_split_method.collection
+  parent: uc_store.admin.store.config

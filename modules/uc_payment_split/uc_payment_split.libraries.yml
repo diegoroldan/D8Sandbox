@@ -1,0 +1,4 @@
+uc_payment_split.styles:
+  css:
+    theme:
+      css/uc_payment_split.css: {}

@@ -1,0 +1,8 @@
+name: Payment Split
+type: module
+description: 'Enables payments to be taken at checkout.'
+package: Ubercart - core (optional)
+version: '8.x-1.0-beta1'
+core: '8.x'
+
+configure: entity.uc_payment_split_method.collection
