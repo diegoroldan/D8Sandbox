@@ -14,7 +14,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Component\Utility\Xss;
 use Drupal\uc_order\Entity\Order;
 use Drupal\uc_order\OrderInterface;
-use Drupal\uc_payment_split\Entity\PaymentSplitMethod;
+use Drupal\uc_payment\Entity\PaymentMethod;
 use Drupal\uc_payment_split\Entity\PaymentReceipt;
 use Drupal\uc_payment_split\Event\PaymentEnteredEvent;
 use Drupal\uc_payment_split\ExpressPaymentSplitMethodPluginInterface;
@@ -64,7 +64,7 @@ function uc_payment_split_form_alter(&$form, FormStateInterface $form_state) {
  * Adds express buttons for enabled payment methods directly to the cart page.
  */
 function uc_payment_split_form_uc_cart_view_form_alter(&$form, FormStateInterface $form_state) {
-  $methods = PaymentSplitMethod::loadMultiple();
+  $methods = PaymentMethod::loadMultiple();
   foreach ($methods as $method) {
     $plugin = $method->getPlugin();
     if ($plugin instanceof ExpressPaymentSplitMethodPluginInterface) {
@@ -84,7 +84,7 @@ function uc_payment_split_form_uc_cart_checkout_review_form_alter(&$form, FormSt
 
   $order = $form_state->get('uc_order');
   /** @var \Drupal\uc_payment_split\PaymentSplitMethodPluginInterface $plugin */
-  $plugin = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+  $plugin = \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order);
 
   if ($plugin instanceof OffsitePaymentSplitMethodPluginInterface) {
     $offsite_form = new OffsitePaymentSplitMethodForm($plugin);
@@ -102,7 +102,7 @@ function uc_payment_split_form_uc_cart_checkout_review_form_alter(&$form, FormSt
 function uc_payment_split_checkout_review_form_validate($form, FormStateInterface $form_state) {
   $order = $form_state->get('uc_order');
   /** @var \Drupal\uc_payment_split\PaymentSplitMethodPluginInterface $plugin */
-  $plugin = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+  $plugin = \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order);
 
   // If the plugin failed for any reason, show the message to the user.
   if ($message = $plugin->orderSubmit($order)) {
@@ -219,7 +219,7 @@ function uc_payment_split_uc_payment_split_receipt_delete(PaymentReceiptInterfac
 function uc_payment_split_uc_order_load($orders) {
   foreach ($orders as $order) {
     if ($order->getPaymentMethodId()) {
-      \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order)->orderLoad($order);
+      \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order)->orderLoad($order);
     }
   }
 }
@@ -229,7 +229,7 @@ function uc_payment_split_uc_order_load($orders) {
  */
 function uc_payment_split_uc_order_presave(OrderInterface $order) {
   if ($order->getPaymentMethodId()) {
-    \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order)->orderSave($order);
+    \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order)->orderSave($order);
   }
 
   // @todo Uncomment this if{} statement when Rules is working.
@@ -267,7 +267,7 @@ function uc_payment_split_uc_order_delete(OrderInterface $order) {
 
   // Call each payment method to delete method-specific data from the database.
   foreach (uc_payment_split_method_list() as $id => $method) {
-    \Drupal::service('plugin.manager.uc_payment.method')->createInstance($id)->orderDelete($order);
+    \Drupal::service('plugin.manager.uc_payment_split.method')->createInstance($id)->orderDelete($order);
   }
 }
 
@@ -337,5 +337,5 @@ function uc_payment_split_load_payments($order_id) {
  *   An array of payment method definitions, keyed by method ID.
  */
 function uc_payment_split_method_list() {
-  return \Drupal::service('plugin.manager.uc_payment.method')->getDefinitions();
+  return \Drupal::service('plugin.manager.uc_payment_split.method')->getDefinitions();
 }

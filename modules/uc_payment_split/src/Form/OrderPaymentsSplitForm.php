@@ -66,7 +66,7 @@ class OrderPaymentsForm extends FormBase {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('plugin.manager.uc_payment.method'),
+      $container->get('plugin.manager.uc_payment_split.method'),
       $container->get('datetime.time'),
       $container->get('date.formatter')
     );

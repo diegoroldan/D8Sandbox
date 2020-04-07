@@ -10,7 +10,7 @@ use Drupal\uc_cart\CheckoutPanePluginBase;
 use Drupal\uc_order\OrderInterface;
 use Drupal\uc_payment\Entity\PaymentMethod;
 use Drupal\uc_payment_split\Entity\PaymentSplitMethod;
-use Drupal\uc_payment\Plugin\PaymentMethodManager;
+use Drupal\uc_payment_split\Plugin\PaymentSplitMethodManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -40,10 +40,10 @@ class PaymentSplitMethodPane extends CheckoutPanePluginBase implements Container
    *   The plugin ID for the plugin instance.
    * @param array $plugin_definition
    *   The plugin implementation definition.
-   * @param \Drupal\uc_payment\Plugin\PaymentMethodManager $payment_method_manager
+   * @param \Drupal\uc_payment_split\Plugin\PaymentSplitMethodManager $payment_method_manager
    *   The payment method manager.
    */
-  public function __construct(array $configuration, $plugin_id, array $plugin_definition, PaymentMethodManager $payment_method_manager) {
+  public function __construct(array $configuration, $plugin_id, array $plugin_definition, PaymentSplitMethodManager $payment_method_manager) {
     parent::__construct($configuration, $plugin_id, $plugin_definition);
 
     $this->paymentMethodManager = $payment_method_manager;
@@ -54,7 +54,7 @@ class PaymentSplitMethodPane extends CheckoutPanePluginBase implements Container
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static($configuration, $plugin_id, $plugin_definition,
-      $container->get('plugin.manager.uc_payment.method')
+      $container->get('plugin.manager.uc_payment_split.method')
     );
   }
 
@@ -82,7 +82,7 @@ class PaymentSplitMethodPane extends CheckoutPanePluginBase implements Container
 
     $options = [];
     $methods = PaymentSplitMethod::loadMultiple();
-    uasort($methods, 'Drupal\uc_payment_split\Entity\PaymentSplitMethod::sort');
+    uasort($methods, 'Drupal\uc_payment\Entity\PaymentMethod::sort');
     foreach ($methods as $method) {
       // $set = rules_config_load('uc_payment_split_method_' . $method['id']);
       // if ($set && !$set->execute($order)) {
@@ -127,7 +127,7 @@ class PaymentSplitMethodPane extends CheckoutPanePluginBase implements Container
 
     // If there are no payment methods available, this will be ''.
     if ($order->getPaymentMethodId()) {
-      $plugin = $this->paymentMethodManager->createFromOrder($order);
+      $plugin = $this->paymentMethodManager->createFromOrder($order, 'PaymentSplitMethod');
       $definition = $plugin->getPluginDefinition();
       $contents['details'] = [
         '#prefix' => '<div id="payment-split-details" class="clearfix ' . Html::cleanCssIdentifier('payment-split-details-' . $definition['id']) . '">',

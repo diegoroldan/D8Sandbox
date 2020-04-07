@@ -121,7 +121,7 @@ class PaymentSplitMethod extends ConfigEntityBase implements PaymentSplitMethodI
    * {@inheritdoc}
    */
   public function getPlugin() {
-    return \Drupal::service('plugin.manager.uc_payment.method')->createInstance($this->plugin, $this->settings);
+    return \Drupal::service('plugin.manager.uc_payment_split.method')->createInstance($this->plugin, $this->settings);
   }
 
   /**

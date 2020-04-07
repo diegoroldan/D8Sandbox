@@ -1,4 +1,4 @@
 services:
-  plugin.manager.uc_payment.method:
-    class: Drupal\uc_payment\Plugin\PaymentMethodManager
+  plugin.manager.uc_payment_split.method:
+    class: Drupal\uc_payment_split\Plugin\PaymentSplitMethodManager
     parent: default_plugin_manager

@@ -8,6 +8,7 @@ use Drupal\Core\Entity\EntityStorageInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
+use Drupal\uc_payment_split\Plugin\PaymentSplitMethodManager;
 use Drupal\uc_payment\Plugin\PaymentMethodManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
@@ -21,7 +22,7 @@ class PaymentSplitMethodListBuilder extends DraggableListBuilder {
    *
    * @var \Drupal\uc_payment\Plugin\PaymentMethodManager
    */
-  protected $paymentMethodManager;
+  protected $paymentSplitMethodManager;
 
   /**
    * Constructs a new PaymentSplitMethodListBuilder object.
@@ -30,19 +31,19 @@ class PaymentSplitMethodListBuilder extends DraggableListBuilder {
    *   The entity type definition.
    * @param \Drupal\Core\Entity\EntityStorageInterface $storage
    *   The entity storage class.
-   * @param \Drupal\uc_payment\Plugin\PaymentMethodManager $payment_method_manager
+   * @param \Drupal\uc_payment_split\Plugin\PaymentSplitMethodManager $payment_method_manager
    *   The payment method plugin manager.
    */
-  public function __construct(EntityTypeInterface $entity_type, EntityStorageInterface $storage, PaymentMethodManager $payment_method_manager) {
+  public function __construct(EntityTypeInterface $entity_type, EntityStorageInterface $storage, PaymentMethodManager $payment_split_method_manager) {
     parent::__construct($entity_type, $storage);
-    $this->paymentMethodManager = $payment_method_manager;
+    $this->paymentSplitMethodManager = $payment_split_method_manager;
   }
 
   /**
    * {@inheritdoc}
    */
   public static function createInstance(ContainerInterface $container, EntityTypeInterface $entity_type) {
-    return new static(
+    return new static(  
       $entity_type,
       $container->get('entity_type.manager')->getStorage($entity_type->id()),
       $container->get('plugin.manager.uc_payment.method')
@@ -105,7 +106,7 @@ class PaymentSplitMethodListBuilder extends DraggableListBuilder {
   public function buildForm(array $form, FormStateInterface $form_state) {
     $options = array_map(function ($definition) {
       return $definition['name'];
-    }, array_filter($this->paymentMethodManager->getDefinitions(), function ($definition) {
+    }, array_filter($this->paymentSplitMethodManager->getDefinitions(), function ($definition) {
       return !$definition['no_ui'];
     }));
 

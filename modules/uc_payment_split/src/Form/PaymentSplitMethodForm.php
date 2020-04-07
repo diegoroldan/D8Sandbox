@@ -58,7 +58,7 @@ class PaymentSplitMethodForm extends EntityForm {
       '#default_value' => $this->entity->id(),
       '#maxlength' => 32,
       '#machine_name' => [
-        'exists' => '\Drupal\uc_payment_split\Entity\PaymentSplitMethod::load',
+        'exists' => '\Drupal\uc_payment\Entity\PaymentMethod::load',
       ],
       '#disabled' => !$this->entity->isNew(),
     ];

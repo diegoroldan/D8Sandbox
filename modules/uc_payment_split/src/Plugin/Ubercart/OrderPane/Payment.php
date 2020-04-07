@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Url;
 use Drupal\uc_order\EditableOrderPanePluginBase;
 use Drupal\uc_order\OrderInterface;
-use Drupal\uc_payment_split\Entity\PaymentSplitMethod;
+use Drupal\uc_payment\Entity\PaymentMethod;
 
 /**
  * Specify and collect payment for an order.
@@ -49,7 +49,7 @@ class Payment extends EditableOrderPanePluginBase {
         ];
       }
 
-      $method = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+      $method = \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order);
       $build['method'] = [
         '#markup' => $this->t('Method: @payment_method', ['@payment_method' => $method->cartReviewTitle()]),
         '#prefix' => '<br />',
@@ -63,7 +63,7 @@ class Payment extends EditableOrderPanePluginBase {
       }
     }
     else {
-      $method = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+      $method = \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order);
       $build['method'] = [
         '#markup' => $this->t('Method: @payment_method', ['@payment_method' => $method->cartReviewTitle()]),
       ];
@@ -86,7 +86,7 @@ class Payment extends EditableOrderPanePluginBase {
   public function buildForm(OrderInterface $order, array $form, FormStateInterface $form_state) {
     $options = [];
     $methods = PaymentSplitMethod::loadMultiple();
-    uasort($methods, 'Drupal\uc_payment_split\Entity\PaymentSplitMethod::sort');
+    uasort($methods, 'Drupal\uc_payment\Entity\PaymentMethod::sort');
     foreach ($methods as $method) {
       $options[$method->id()] = $method->label();
     }
@@ -131,7 +131,7 @@ class Payment extends EditableOrderPanePluginBase {
     $changes['payment_details'] = $form_state->getValue('payment_details') ?: [];
 
     $order->setPaymentMethodId($changes['payment_method']);
-    $method = \Drupal::service('plugin.manager.uc_payment.method')->createFromOrder($order);
+    $method = \Drupal::service('plugin.manager.uc_payment_split.method')->createFromOrder($order);
     $return = $method->orderEditProcess($order, $form, $form_state);
     if (is_array($return)) {
       $changes['payment_details'] = array_merge($changes['payment_details'], $return);
